@@ -1,0 +1,112 @@
+@media print and (color) {
+  * {
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+  }
+}
+
+@media print {
+  @page {
+    margin: 1cm; // Use centimeters or inches, not pixels
+  }
+
+  body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    page-break-after: avoid; // Prevent headings from being printed at the bottom of the page
+  }
+
+  .head-nobreak {
+    margin-top: 110px;
+  }
+
+  .head-break {
+    margin-top: 110px;
+    page-break-before: always;
+  }
+
+  article {
+    page-break-after: always; // Always start new articles on a new page
+  }
+ 
+  img {
+    page-break-inside: avoid; // Prevent images from being split up
+  }
+  
+  a[href^=http]:after {
+    font-style: italic;
+    content: &quot; &lt; &quot; attr(href) &quot; &gt; &quot;;
+  }
+  .report-header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+  }
+}
+
+body {
+  font-family: Arial;
+}
+
+h2,
+h3 {
+  color: #07855F;
+}
+
+.container {
+  width: 940px;
+  margin: auto;
+}
+
+.page-header {
+  border-bottom: 1px #07855F;
+  border-bottom-style: solid;
+}
+
+.report-header {
+  color: white;
+  background-color: #07855F;
+  width: 100%;
+  display: table;
+}
+
+.report-logo {
+    vertical-align: middle;
+    display: table-cell;
+    margin-right: 1em;
+    float: right;
+}
+
+.helper {
+    vertical-align: middle;
+    display: table-cell;
+}
+
+.indent-20 {
+  margin-left: 20px;
+}
+
+pre {
+  background: silver;
+  border-style: solid;
+  border-width: 1px;
+  border-color: black;
+  padding: 20px;
+}
+
+table {
+  width: 100%;
+}
+
+tbody tr:nth-child(odd) {
+     background-color: #ccc;
+}

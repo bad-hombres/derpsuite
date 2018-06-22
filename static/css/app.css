@@ -1,0 +1,8 @@
+.console {
+  height: 600px;
+  overflow: auto;
+  font-family: 'Lucida Console', Monaco, monospace; 
+  background-color: black;
+  color: green;
+  white-space: pre;
+}
