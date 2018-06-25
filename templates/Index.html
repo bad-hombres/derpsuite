@@ -17,58 +17,120 @@
   </div>
   <div class="col s12">
     <ul class="tabs">
-      <li class="tab col s3"><a class="active" href="#test1">Explore</a></li>
-      <li class="tab col s3"><a href="#test2">Intercept</a></li>
+      <li class="tab col s3"><a class="active" href="#enum">Explore</a></li>
+      <li class="tab col s3"><a id="intercept-link" href="#intercept">Intercept</a></li>
     </ul>
   </div>
-  <div id="test1">
-    <div class="col s4">
-        <ul id="process-list" class="scale-transition collection with-header">
-          <li class="collection-header green"><b>Processes</b></li>
-          <li class="android-process collection-item"><div>Alvin<a href="#!" class="secondary-content"><i class="material-icons">send</i></a></div></li>
-        </ul>
-        <ul id="method-list" class="scale-transition collection with-header">
-          <li class="collection-header"><b>Methods</b></li>
-          <li class="collection-item"><div>Alvin<a href="#!" class="secondary-content"><i class="material-icons">send</i></a></div></li>
-        </ul>
+  <div id="enum">
+    <div class="row">
+      <div class="col s12">
+        <nav>
+          <div class="nav-wrapper">
+            <div id="crumbs" class="col s12">
+              <a href="#!" class="breadcrumb">Root</a>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </div>
+    <div class="col s8">
+      <ul id="process-list" class="scale-transition collection with-header"
+                            data-next="#class-list">
+        <li class="collection-header"><b>Processes</b></li>
+        <!--<li class="process-nav collection-item"
+          data-name="Alvin1"><div>Alvin<a href="#!" class="secondary-content"><i
+          class="material-icons">send</i></a></div></li>-->
+      </ul>
+      <ul id="class-list" class="scale-transition collection with-header" data-next="#method-list" data-prev="#process-list">
+        <li class="collection-header"><a class="btn-floating btn-small waves-effect waves-light"><i class="tiny material-icons">arrow_back</i></a>  <b>Classes</b></li>
+        <!--
+        <li class="process-nav collection-item" data-name="Alvin2"><div>Alvin<a href="#!" class="secondary-content"><i class="material-icons">send</i></a></div></li>
+        -->
+      </ul>
+      <ul id="method-list" class="scale-transition collection with-header" data-prev="#class-list">
+        <li class="collection-header"><a class="btn-floating btn-small waves-effect waves-light"><i class="tiny material-icons">arrow_back</i></a> <b>Methods</b></li>
+        <!--
+        <li class="process-nav collection-item" data-name="Alvin3"><div>Alvin<a href="#!" class="secondary-content"><i class="material-icons">send</i></a></div></li>
+        -->
+      </ul>
     </div>
   </div>
-  <div id="test2" class="col s12">Test 2</div>
+  <div id="intercept" class="col s12">Test 2</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-  <script>
-    function setClickHandlers() {
-      $(".android-process").on("click", function() {
-        $("#process-list").addClass("scale-out");
-        var methods = $("#method-list");
-        methods.removeClass("scale-out")
-        methods.addClass("scale-in");
-        $("#process-list").addClass("hide");
+<script>
+  function revealNextCollection(elm, direction, name, makinfRequest) {
+    if (elm.data(direction) !== undefined) {
+      if (direction === "next") {
+        var crumb = $.parseHTML("<a href='#!' class='breadcrumb'>" + name + "</a>");
+        $("#crumbs").append(crumb);
+      } else {
+        $("#crumbs a").last().remove()
+      }
+      elm.slideUp(300);
+      if(!makinfRequest) {
+        $(elm.data(direction)).delay(300).slideDown(300);
+      } else {
+        $(elm.data(direction)).find('.collection-item').remove();
+      }
+    }
+  }
+
+function setClickHandlers() {
+  $(".process-nav").unbind("click");
+  $(".process-nav").on("click", function(event) {
+    event.stopPropagation();
+    var parent = $(this).parent();
+    var resultsContainer = undefined;
+
+    if (parent.data("next") !== undefined) {
+      resultsContainer = $(parent.data("next"));
+      socket.emit(parent.attr("id"), $(this).data("name"), function(data) {
+        processEnumResponse(data, resultsContainer, parent.attr("id"));
       });
     }
+    revealNextCollection(parent, "next", $(this).data("name"), true);
+  });
 
-    $(document).ready(function(){
-      $("#method-list").addClass("scale-out");
-      $('.tooltipped').tooltip();
-      $('.fixed-action-btn').floatingActionButton();
-      $('.tabs').tabs();
-      setClickHandlers();
-    });
+  $("[data-prev]").unbind("click");
+  $("[data-prev]").on("click", function(event) {
+    event.stopPropagation();
+    revealNextCollection($(this), "prev", false);
+  });
 
-    $('#connect-device').on("click", function() {
-      socket.emit("connection", {"data": "connect" }, function(data) {
-        $("#connect-status").text(data["device"]["id"] + " - " + data["device"]["name"]);
-        $("#connect-status-icon").addClass("green-text");
+  $(".interceptor").on("click", function(event) {
+    event.stopPropagation();
+    $('.tabs').tabs("select","intercept");
+  });
+}
 
-        $(data['processes']).each(function(e) {
-          var elm = $.parseHTML("<li class='android-process collection-item' data-name='" + data['processes'][e] + "'><div>" + data['processes'][e] + "<a href='#!' class='secondary-content'><i class='material-icons'>send</i></a></div></li>");
-          $("#process-list").append(elm);
-        });
-        setClickHandlers();
-      });
+function processEnumResponse(list, container, type) {
+  $(list).each(function(e) {
+    var elm = $.parseHTML("<li class='process-nav collection-item' data-name='" + list[e] + "' data-type='" + type +"'><div>" + list[e] + "<a href='#!' class='secondary-content'><i class='material-icons'>chevron_right</i></a><a href='#!' class='interceptor secondary-content'><i class='material-icons'>dvr</i></a></div></li>");
+    container.append(elm);
+  });
+  container.slideDown(300);
+  setClickHandlers();
+}
 
-    });
-  </script>
+$(document).ready(function(){
+  $("#method-list").slideUp();
+  $("#class-list").slideUp();
+  $('.tooltipped').tooltip();
+  $('.fixed-action-btn').floatingActionButton();
+  $('.tabs').tabs();
+  setClickHandlers();
+});
+
+$('#connect-device').on("click", function() {
+  socket.emit("connection", {"data": "connect" }, function(data) {
+    $("#connect-status").text(data["device"]["id"] + " - " + data["device"]["name"]);
+    $("#connect-status-icon").addClass("green-text");
+    processEnumResponse(data["processes"], $("#process-list"))
+  });
+
+});
+</script>
 {% endblock %}

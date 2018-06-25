@@ -1,6 +1,7 @@
 from flask import Flask, request, send_from_directory, render_template
 from flask_socketio import SocketIO
 import frida
+import device
 
 session = None
 
@@ -27,9 +28,17 @@ def send_image(path):
 
 @socketio.on('connection')
 def handle_message(message):
-    session = frida.get_usb_device()
-    process_names = map(lambda x: x.name, session.enumerate_processes())
-    return {"device": {"id": session.id, "name": session.name} , "processes": process_names}
+    return {"device": {"id": device.id(), "name": device.name()} , "processes": device.enum_processes()}
+
+@socketio.on("process-list")
+def handle_classes(message):
+   print "!!!!!!!!!!!!XXXXXXXXXXXXXXXXXXXXXX!!!!!!!!!!!!!!!!!!!!!!!!!"
+   return  device.enum_classes(message)
+
+@socketio.on("class-list")
+def handle_methods(message):
+   print "!!!!!!!!!!!!XXXXXXXXXXXXXXXXXXXXXX!!!!!!!!!!!!!!!!!!!!!!!!!"
+   return  device.enum_methods(message)
 
 @socketio.on("connect")
 def on_connect():
