@@ -34,33 +34,90 @@
       </div>
     </div>
     <div class="col s8">
-      <ul id="process-list" class="scale-transition collection with-header"
-                            data-next="#class-list">
-        <li class="collection-header"><b>Processes</b></li>
-        <!--<li class="process-nav collection-item"
-          data-name="Alvin1"><div>Alvin<a href="#!" class="secondary-content"><i
-          class="material-icons">send</i></a></div></li>-->
+      <ul id="process-list" class="scale-transition collection with-header" data-next="#class-list">
+        <li class="collection-header"><b>Processes</b> <input class="list-filter" data-target="#process-list" type="text" placeholder="Search"</input> </li>
       </ul>
       <ul id="class-list" class="scale-transition collection with-header" data-next="#method-list" data-prev="#process-list">
-        <li class="collection-header"><a class="btn-floating btn-small waves-effect waves-light"><i class="tiny material-icons">arrow_back</i></a>  <b>Classes</b></li>
-        <!--
-        <li class="process-nav collection-item" data-name="Alvin2"><div>Alvin<a href="#!" class="secondary-content"><i class="material-icons">send</i></a></div></li>
-        -->
+        <li class="collection-header"><a class="btn-floating btn-small waves-effect waves-light"><i class="tiny
+              material-icons">arrow_back</i></a>  <b>Classes</b> <input class="list-filter" data-target="#class-list" type="text" placeholder="Search"</input> </li>
       </ul>
       <ul id="method-list" class="scale-transition collection with-header" data-prev="#class-list">
-        <li class="collection-header"><a class="btn-floating btn-small waves-effect waves-light"><i class="tiny material-icons">arrow_back</i></a> <b>Methods</b></li>
-        <!--
-        <li class="process-nav collection-item" data-name="Alvin3"><div>Alvin<a href="#!" class="secondary-content"><i class="material-icons">send</i></a></div></li>
-        -->
+        <li class="collection-header"><a class="btn-floating btn-small
+            waves-effect waves-light"><i class="tiny material-icons">arrow_back</i></a> <b>Methods</b> <input class="list-filter" data-target="#method-list" type="text" placeholder="Search"</input></li>
       </ul>
     </div>
   </div>
-  <div id="intercept" class="col s12">Test 2</div>
+  <div id="intercept" class="col s12">
+    <table class="striped">
+      <thead>
+        <tr>
+          <td>Time</td>
+          <td>Method</td>
+          <td>Finished</td>
+        </tr>
+      </thead>
+      <tbody id="trace_results">
+      </tbody>
+    </table>
+    <div class="row">
+      <div class="col s12">
+        <a id="resume-intercept" class="intercept-control disabled waves-effect waves-light btn"><i class="material-icons">play_circle_outline</i></a>
+        <a id="stop-intercept" class="intercept-control disabled waves-effect waves-light btn"><i class="material-icons">pause</i></a>
+        <a id="toggle-intercept" class="intercept-toggle waves-effect waves-light btn">Intercept</a>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col s6">
+        <b>Arguments:</b>
+        <pre id="args"></pre>
+      </div>
+      <div class="col s6">
+        <b>Result:</b>
+        <pre id="result"></pre>
+      </div>
+    </div>
+    <div id="interceptModal" class="modal modal-fixed-footer">
+      <div class="modal-content">
+        <h4>Edit Request <a id="toggle-intercept-response" class="waves-effect waves-effect-light btn">Intercept Response</a> </h4>
+        <div class="row">
+          <div class="col s6">
+            <b>Arguments:</b>
+            <textarea style="height: 470px;" id="edit_args"></textarea>
+          </div>
+          <div class="col s6">
+            <b>Result:</b>
+            <textarea style="height: 470px;" id="edit_result"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="edit-close" href="#!" class="modal-close waves-effect waves-green btn-flat">Send</a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  function timeNow() {
+    var d = new Date(),
+        h = (d.getHours()<10?'0':'') + d.getHours(),
+        m = (d.getMinutes()<10?'0':'') + d.getMinutes(),
+        s = (d.getSeconds()<10?'0':'') + d.getSeconds();
+    return h + ':' + m + ":" + s;
+  }
+
+  function getTraceRow(method, args, call_id) {
+    var rowString = "<tr id='" + call_id + "' data-args='" + JSON.stringify(args) + "'><td>" + timeNow() + "</td><td>" + method + "</td>><td></td></tr>";
+    return $.parseHTML(rowString);
+  }
+
+  function updateReturnVal(id, val) {
+    $("#" + id).data("result", JSON.stringify(val));
+    $("#" + id + " td").last().html("<i class='material-icons'>check</i>");
+  }
+
   function revealNextCollection(elm, direction, name, makinfRequest) {
     if (elm.data(direction) !== undefined) {
       if (direction === "next") {
@@ -83,12 +140,13 @@ function setClickHandlers() {
   $(".process-nav").on("click", function(event) {
     event.stopPropagation();
     var parent = $(this).parent();
+    var next
     var resultsContainer = undefined;
 
     if (parent.data("next") !== undefined) {
       resultsContainer = $(parent.data("next"));
       socket.emit(parent.attr("id"), $(this).data("name"), function(data) {
-        processEnumResponse(data, resultsContainer, parent.attr("id"));
+        processEnumResponse(data, resultsContainer, resultsContainer.attr("id"));
       });
     }
     revealNextCollection(parent, "next", $(this).data("name"), true);
@@ -103,6 +161,22 @@ function setClickHandlers() {
   $(".interceptor").on("click", function(event) {
     event.stopPropagation();
     $('.tabs').tabs("select","intercept");
+    var type = $(this).parent().parent().data("type");
+    var name = $(this).parent().parent().data("name");
+    var template = {"class": ""}
+
+    if (type === "class-list") {
+      template["class"] = name;
+    } else if (type === "method-list") {
+      template["method"] = name;
+      template["class"] = $("#crumbs a").last().text();
+    }
+
+    $("#resume-intercept").addClass("disabled");
+    $("#stop-intercept").removeClass("disabled");
+    socket.emit("stop-intercept");
+    socket.emit("intercept", template);
+
   });
 }
 
@@ -115,13 +189,134 @@ function processEnumResponse(list, container, type) {
   setClickHandlers();
 }
 
+var performIntercept = false;
+var performRetIntercept = false;
+
+var delay = (function() {
+  var timer = 0;
+  return function(callback, ms) {
+    clearTimeout(timer);
+    timer = setTimeout(callback, ms);
+  }
+})();
+
+function setupFilters() {
+  $('.list-filter').on("click", function(event) {
+    event.stopPropagation();
+  });
+
+  $(".list-filter").keyup(function() {
+    var filter = $(this).val();
+    var target = $(this).data("target");
+
+    delay(function() {
+      var r = new RegExp(filter , "i");
+      $(target + " li.collection-item").each(function(index) {
+        if ($(this).text().match(r)) {
+          $(this).show();
+        } else {
+          $(this).hide();
+        }
+      });
+    }, 100);
+  });
+}
+
 $(document).ready(function(){
   $("#method-list").slideUp();
   $("#class-list").slideUp();
   $('.tooltipped').tooltip();
   $('.fixed-action-btn').floatingActionButton();
   $('.tabs').tabs();
+  $('.modal').modal();
+
+  setupFilters();
   setClickHandlers();
+
+  socket.on("method_call", function(msg) {
+    if (msg["data"]["payload"].hasOwnProperty("args")) {
+      var row = getTraceRow(msg["data"]["payload"]["method"], msg["data"]["payload"]["args"], msg["data"]["payload"]["call_id"]);
+      $(row).on("click", function() {
+        $("#trace_results tr").removeClass("active");
+        $(this).addClass("active");
+
+        $("#args").text(JSON.stringify($(this).data("args")));
+        $("#result").text(JSON.stringify($(this).data("result")));
+      });
+
+      $("#trace_results").append(row);
+      $('#trace_results').scrollTop($('#trace_results')[0].scrollHeight);
+
+      if (performIntercept) {
+        $("#edit_args").val("");
+        $("#edit_result").val("");
+        $('#edit_args').val(JSON.stringify(msg["data"]["payload"]["args"]));
+        $('#edit_args').data("call-id", msg["data"]["payload"]["call_id"]);
+        $('#edit_args').data("orig", $("#edit_args").val());
+        $('#interceptModal').modal("open");
+      }
+    } else {
+      $("#edit_result").val(JSON.stringify(msg["data"]["payload"]["result"]));
+      $("#edit_result").data("orig", $("#edit_result").val());
+      updateReturnVal(msg["data"]["payload"]["call_id"], msg["data"]["payload"]["result"]);
+    }
+  });
+
+  $(".intercept-control").on("click", function() {
+    socket.emit($(this).attr("id"));
+    $(".intercept-control").removeClass("disabled");
+    $(this).addClass("disabled");
+  });
+  
+  $("#toggle-intercept").on("click", function() {
+    socket.emit($(this).attr("id"));
+    performIntercept = !performIntercept;
+
+    if ($(this).hasClass("red")) {
+      $(this).removeClass("red");
+    } else {
+      $(this).addClass("red");
+    }
+  });
+
+  var waitForResult = false
+  $("#toggle-intercept-response").on("click", function() {
+    socket.emit($(this).attr("id"));
+    performRetIntercept = !performRetIntercept;
+
+    if ($(this).hasClass("red")) {
+      $(this).removeClass("red");
+    } else {
+      waitForResult = true;
+      $(this).addClass("red");
+    }
+  });
+
+  $("#edit-close").on("click", function(event) {
+    if (performRetIntercept) {
+      event.stopPropagation();
+    }
+
+    var call_id = $("#edit_args").data("call-id");
+    
+    if ($("#edit_result").val() !== "") {
+      performRetIntercept = false;
+      $("#toggle-intercept-response").removeClass("red");
+      var data = $("#edit_result").val();
+      socket.emit("edit-result", data);
+      
+      $('#interceptModal').modal("close");
+      $("#" + call_id).data("result", JSON.parse($("#edit_result").val()));
+    } else {
+      var data = $("#edit_args").val();
+
+      if (data === $("#edit_args").data("orig")) {
+        data = "no-change";
+      }
+      socket.emit("edit-args", data);
+      $("#" + call_id).data("args", JSON.parse($("#edit_args").val()));
+    }
+  })
 });
 
 $('#connect-device').on("click", function() {
@@ -132,5 +327,6 @@ $('#connect-device').on("click", function() {
   });
 
 });
+
 </script>
 {% endblock %}

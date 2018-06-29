@@ -44,5 +44,41 @@ def handle_methods(message):
 def on_connect():
     print "Client connection"
 
+@socketio.on("intercept")
+def on_intercept(message):
+    print "Intercept Requested: %s " % message
+    method = ""
+    if "method" in message:
+        method = message["method"]
+
+    device.intercept(message["class"], method, socketio)
+
+@socketio.on("stop-intercept")
+def on_stop():
+    device.stop_intercept()
+
+@socketio.on("resume-intercept")
+def on_resume():
+    device.resume_intercept()
+
+
+@socketio.on("toggle-intercept")
+def on_toggle():
+    device.toggle_intercept()
+
+@socketio.on("toggle-intercept-response")
+def on_toggle_ret():
+    print "Response Incercept Toggle"
+    device.toggle_ret_intercept()
+
+@socketio.on("edit-args")
+def on_edit(message):
+    device.send_response(message, "edit-args")
+
+@socketio.on("edit-result")
+def on_edit_result(message):
+    print "[+] Edit result with: %s" % message
+    device.send_response(message, "edit-result")
+
 if __name__ == "__main__":
    socketio.run(app) 

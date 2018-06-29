@@ -6,3 +6,30 @@
   color: green;
   white-space: pre;
 }
+
+tbody {
+  display:block;
+  height:250px;
+  overflow:auto;
+}
+thead, tbody tr {
+  display:table;
+  width:100%;
+  table-layout:fixed;
+}
+thead {
+  width: calc( 100% - 1em )
+}
+table {
+  width:100%;
+}
+
+tbody tr.active {
+  background-color: #4db6ac !important;
+  color: #ffffff;
+}
+
+td, th {
+  padding: 2px !important;
+  margin: 2px !important;
+}
